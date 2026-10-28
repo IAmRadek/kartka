@@ -1,0 +1,9 @@
+#!/bin/sh
+# Opens files in a new Kartka process and waits until you close its last window,
+# so it works as $EDITOR. `open` refuses paths that do not exist, so create them first.
+# The app path is explicit: `open -a Kartka` can pick any registered copy, such as an old build.
+app="${KARTKA_APP:-$HOME/Applications/Kartka.app}"
+for file in "$@"; do
+    [ -e "$file" ] || : > "$file"
+done
+exec open -W -n -a "$app" "$@"

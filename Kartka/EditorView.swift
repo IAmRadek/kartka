@@ -14,6 +14,10 @@ struct EditorView: NSViewRepresentable {
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSTextView.scrollableTextView()
         let textView = scrollView.documentView as! NSTextView
+        // Whitespace markers come from an NSLayoutManager subclass. Reading `layoutManager`
+        // switches the view from TextKit 2 to TextKit 1, so it has one to replace.
+        _ = textView.layoutManager
+        textView.textContainer?.replaceLayoutManager(WhitespaceLayoutManager())
 
         textView.delegate = context.coordinator
         textView.isRichText = false
@@ -115,7 +119,66 @@ struct EditorView: NSViewRepresentable {
         func textDidChange(_ notification: Notification) {
             guard let textView = notification.object as? NSTextView else { return }
             text.wrappedValue = textView.string
+            // The end-of-file marker sits below the last line, outside the area AppKit redraws.
+            textView.needsDisplay = true
         }
+    }
+}
+
+/// Draws faint markers over spaces and tabs, and "⊘" under the last line. After a final newline
+/// the last line is the empty one, so an empty line above "⊘" means the file ends with a newline.
+/// The text itself is unchanged.
+final class WhitespaceLayoutManager: NSLayoutManager {
+    private static let markers: [unichar: String] = [0x20: "·", 0x09: "→"]
+
+    private enum Placement {
+        case over, belowLastLine
+    }
+
+    override func drawGlyphs(forGlyphRange glyphsToShow: NSRange, at origin: NSPoint) {
+        super.drawGlyphs(forGlyphRange: glyphsToShow, at: origin)
+        guard let textStorage, textStorage.length > 0 else { return }
+
+        let text = textStorage.string as NSString
+        let characters = characterRange(forGlyphRange: glyphsToShow, actualGlyphRange: nil)
+        for index in characters.location..<NSMaxRange(characters) {
+            if let marker = Self.markers[text.character(at: index)] {
+                drawMarker(marker, atCharacter: index, origin: origin, placement: .over)
+            }
+        }
+
+        let last = text.length - 1
+        guard NSLocationInRange(last, characters) else { return }
+        drawMarker("⊘", atCharacter: last, origin: origin, placement: .belowLastLine)
+    }
+
+    private func drawMarker(_ marker: String, atCharacter index: Int, origin: NSPoint, placement: Placement) {
+        guard let textStorage, let container = textContainers.first else { return }
+
+        let glyph = glyphIndexForCharacter(at: index)
+        // Relative to the line fragment; y is the baseline.
+        let position = location(forGlyphAt: glyph)
+        let font = textStorage.attribute(.font, at: index, effectiveRange: nil) as? NSFont
+            ?? .systemFont(ofSize: NSFont.systemFontSize)
+
+        let line: NSRect
+        let x: CGFloat
+        switch placement {
+        case .over:
+            line = lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil)
+            x = line.minX + position.x
+        case .belowLastLine:
+            // The extra line fragment exists only after a final newline. It has no glyphs, only
+            // this rect. Lines share one height, so `position.y` from the last glyph still applies.
+            let lastLine = extraLineFragmentTextContainer == nil
+                ? lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil)
+                : extraLineFragmentRect
+            line = lastLine.offsetBy(dx: 0, dy: lastLine.height)
+            x = lastLine.minX + container.lineFragmentPadding
+        }
+        // The text view is flipped, so draw(at:) places the marker's top edge at y.
+        let point = NSPoint(x: origin.x + x, y: origin.y + line.minY + position.y - font.ascender)
+        marker.draw(at: point, withAttributes: [.font: font, .foregroundColor: NSColor.tertiaryLabelColor])
     }
 }
 
@@ -149,7 +212,8 @@ struct CountFooter: View {
 
     var body: some View {
         let words = text.split(whereSeparator: \.isWhitespace).count
-        let lines = text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline).count
+        // Counts newlines, like `wc -l`. "\r\n" is one Character, so it counts once.
+        let lines = text.filter(\.isNewline).count
         VStack(spacing: 0) {
             Divider()
             Text("\(words) Words  ·  \(text.count) Characters  ·  \(lines) Lines")
