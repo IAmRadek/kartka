@@ -1,7 +1,8 @@
 APP_DIR ?= $(HOME)/Applications
 BIN_DIR ?= $(HOME)/.local/bin
 NOTARY_PROFILE ?= kartka-notary
-VERSION := $(shell sed -n 's/^ *MARKETING_VERSION: "\(.*\)"/\1/p' project.yml)
+# The release workflow sets VERSION from the git tag. Local builds use project.yml.
+VERSION ?= $(shell sed -n 's/^ *MARKETING_VERSION: "\(.*\)"/\1/p' project.yml)
 
 APP := build/Build/Products/Release/Kartka.app
 ARCHIVE := build/Kartka.xcarchive
@@ -25,7 +26,8 @@ install: build
 # Signed with Developer ID and a secure timestamp, which notarization requires.
 export: project
 	rm -rf "$(ARCHIVE)" "$(EXPORT)"
-	xcodebuild -scheme Kartka -configuration Release -derivedDataPath build -archivePath "$(ARCHIVE)" archive
+	xcodebuild -scheme Kartka -configuration Release -derivedDataPath build -archivePath "$(ARCHIVE)" \
+		MARKETING_VERSION="$(VERSION)" archive
 	xcodebuild -exportArchive -archivePath "$(ARCHIVE)" -exportPath "$(EXPORT)" -exportOptionsPlist ExportOptions.plist
 
 # Uploads the app to Apple for notarization, then staples the ticket so the app

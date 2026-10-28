@@ -61,15 +61,16 @@ xcrun notarytool store-credentials kartka-notary --apple-id <Apple ID> --team-id
 
 To make a release, do these steps:
 
-1. Set `MARKETING_VERSION` in `project.yml`.
-2. Run `make release`.
-3. Upload `build/Kartka-<version>.zip` to a GitHub release.
+1. Run `make release VERSION=<version>`, for example `make release VERSION=0.1.1`.
+2. Upload `build/Kartka-<version>.zip` to a GitHub release.
+
+Without `VERSION`, the command uses `MARKETING_VERSION` from `project.yml`.
 
 The command prints the SHA-256 hash of the zip. The hash goes into the Nix package.
 
 ### Release from GitHub Actions
 
-The workflow `.github/workflows/release.yml` does the same steps on a GitHub macOS runner. If you push a tag such as `v0.1.0`, the workflow starts. The tag must match `MARKETING_VERSION`.
+The workflow `.github/workflows/release.yml` does the same steps on a GitHub macOS runner. If you push a tag such as `v0.1.0`, the workflow starts. The tag sets the app version.
 
 The workflow needs these repository secrets:
 

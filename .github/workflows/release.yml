@@ -1,6 +1,6 @@
 name: Release
 
-# Push a tag such as v0.1.0. It must match MARKETING_VERSION in project.yml.
+# Push a tag such as v0.1.0. The tag sets the app version, in place of MARKETING_VERSION in project.yml.
 on:
   push:
     tags: ["v*"]
@@ -13,14 +13,6 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-
-      - name: Check tag matches version
-        run: |
-          version=$(sed -n 's/^ *MARKETING_VERSION: "\(.*\)"/\1/p' project.yml)
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match MARKETING_VERSION $version"
-            exit 1
-          fi
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -53,7 +45,7 @@ jobs:
             --apple-id "$NOTARY_APPLE_ID" --team-id JYDM4GTWRT --password "$NOTARY_PASSWORD"
 
       - name: Build, notarize and zip
-        run: make release
+        run: make release VERSION="${GITHUB_REF_NAME#v}"
 
       - name: Create GitHub release
         env:
