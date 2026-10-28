@@ -67,6 +67,17 @@ To make a release, do these steps:
 
 The command prints the SHA-256 hash of the zip. The hash goes into the Nix package.
 
+### Release from GitHub Actions
+
+The workflow `.github/workflows/release.yml` does the same steps on a GitHub macOS runner. If you push a tag such as `v0.1.0`, the workflow starts. The tag must match `MARKETING_VERSION`.
+
+The workflow needs these repository secrets:
+
+- `DEVELOPER_ID_P12`: the Developer ID certificate and its private key, as a base64 `.p12` file
+- `DEVELOPER_ID_P12_PASSWORD`: the password of the `.p12` file
+- `NOTARY_APPLE_ID`: your Apple ID
+- `NOTARY_PASSWORD`: the app-specific password for notarization
+
 ## Use as $EDITOR
 
 The `kartka` script opens files in a new Kartka process, then waits for that process to stop. When you close the last window of a Kartka process, that process quits. If you stop the script with Ctrl-C or close its terminal, the script quits its Kartka process. Kartka saves open documents before it quits.

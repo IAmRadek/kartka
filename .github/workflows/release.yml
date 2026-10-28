@@ -1,0 +1,71 @@
+name: Release
+
+# Push a tag such as v0.1.0. It must match MARKETING_VERSION in project.yml.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    env:
+      KEYCHAIN: ${{ runner.temp }}/signing.keychain-db
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag matches version
+        run: |
+          version=$(sed -n 's/^ *MARKETING_VERSION: "\(.*\)"/\1/p' project.yml)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match MARKETING_VERSION $version"
+            exit 1
+          fi
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      # A temporary keychain, set as default, so codesign finds the certificate and
+      # notarytool stores and finds the kartka-notary profile without extra flags.
+      - name: Set up signing keychain
+        env:
+          DEVELOPER_ID_P12: ${{ secrets.DEVELOPER_ID_P12 }}
+          DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+        run: |
+          keychain_password=$(uuidgen)
+          certificate="$RUNNER_TEMP/developer-id.p12"
+          echo "$DEVELOPER_ID_P12" | base64 --decode > "$certificate"
+
+          security create-keychain -p "$keychain_password" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$keychain_password" "$KEYCHAIN"
+          security import "$certificate" -P "$DEVELOPER_ID_P12_PASSWORD" -f pkcs12 -k "$KEYCHAIN" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: -k "$keychain_password" "$KEYCHAIN" > /dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -s "$KEYCHAIN"
+          rm "$certificate"
+
+          xcrun notarytool store-credentials kartka-notary \
+            --apple-id "$NOTARY_APPLE_ID" --team-id JYDM4GTWRT --password "$NOTARY_PASSWORD"
+
+      - name: Build, notarize and zip
+        run: make release
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          zip=$(ls build/Kartka-*.zip)
+          sha=$(shasum -a 256 "$zip" | cut -d ' ' -f 1)
+          gh release create "$GITHUB_REF_NAME" "$zip" \
+            --title "Kartka ${GITHUB_REF_NAME#v}" \
+            --notes "SHA-256: \`$sha\`"
+
+      - name: Remove signing keychain
+        if: always()
+        run: security delete-keychain "$KEYCHAIN" || true
