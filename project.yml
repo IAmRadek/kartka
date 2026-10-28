@@ -1,0 +1,44 @@
+name: Kartka
+options:
+  bundleIdPrefix: com.struct0x
+  deploymentTarget:
+    macOS: "14.0"
+targets:
+  Kartka:
+    type: application
+    platform: macOS
+    sources: [Kartka]
+    settings:
+      base:
+        PRODUCT_NAME: Kartka
+        PRODUCT_BUNDLE_IDENTIFIER: com.struct0x.kartka
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        # "Sign to Run Locally": ad-hoc signature, no team.
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: ""
+        ENABLE_HARDENED_RUNTIME: YES
+    info:
+      path: Kartka/Info.plist
+      properties:
+        CFBundleDisplayName: Kartka
+        LSApplicationCategoryType: public.app-category.productivity
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Plain Text
+            CFBundleTypeRole: Editor
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - public.plain-text
+              - public.utf8-plain-text
+              - net.daringfireball.markdown
+              - public.json
+              - public.yaml
+              - public.source-code
+              - public.data
+    entitlements:
+      path: Kartka/Kartka.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.files.user-selected.read-write: true

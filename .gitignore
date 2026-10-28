@@ -60,3 +60,11 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# Kartka: project.yml is the source of truth; XcodeGen generates these.
+*.xcodeproj
+Kartka/Info.plist
+Kartka/Kartka.entitlements
+build/
+DerivedData/
+.DS_Store
