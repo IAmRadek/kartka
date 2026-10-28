@@ -2,8 +2,29 @@
 # Opens files in a new Kartka process and waits until you close its last window,
 # so it works as $EDITOR. `open` refuses paths that do not exist, so create them first.
 # The app path is explicit: `open -a Kartka` can pick any registered copy, such as an old build.
-app="${KARTKA_APP:-$HOME/Applications/Kartka.app}"
+# Inside an app, at Contents/Resources/kartka, the script opens that app, also through a symlink.
+self=$(realpath "$0")
+case "$self" in
+    */Kartka.app/Contents/Resources/kartka) default_app=${self%/Contents/Resources/kartka} ;;
+    *) default_app="$HOME/Applications/Kartka.app" ;;
+esac
+app="${KARTKA_APP:-$default_app}"
 for file in "$@"; do
     [ -e "$file" ] || : > "$file"
 done
-exec open -W -n -a "$app" "$@"
+
+# Tags the Kartka process with this script's PID, so the trap below finds the right one.
+# AppKit reads "-kartkaSession <pid>" as a user default for this launch only.
+session=$$
+open -W -n -a "$app" "$@" --args -kartkaSession "$session" &
+opener=$!
+
+# Ctrl-C or a closed terminal stops this script, but Kartka runs outside it.
+# Kartka quits like ⌘Q on SIGTERM, so open documents autosave first.
+quit_kartka() {
+    pkill -TERM -f "MacOS/Kartka -kartkaSession $session\$"
+    wait "$opener"
+    exit 130
+}
+trap quit_kartka INT TERM HUP
+wait "$opener"

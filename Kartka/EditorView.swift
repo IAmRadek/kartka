@@ -116,6 +116,11 @@ struct EditorView: NSViewRepresentable {
             self.text = text
         }
 
+        // NSDocument marks the window as edited from its own undo manager's changes.
+        func undoManager(for view: NSTextView) -> UndoManager? {
+            (view.window?.windowController?.document as? NSDocument)?.undoManager ?? view.window?.undoManager
+        }
+
         func textDidChange(_ notification: Notification) {
             guard let textView = notification.object as? NSTextView else { return }
             text.wrappedValue = textView.string

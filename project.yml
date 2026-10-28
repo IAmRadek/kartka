@@ -7,7 +7,11 @@ targets:
   Kartka:
     type: application
     platform: macOS
-    sources: [Kartka]
+    sources:
+      - Kartka
+      # The command line script ships inside the app, at Contents/Resources/kartka.
+      - path: bin/kartka
+        buildPhase: resources
     settings:
       base:
         PRODUCT_NAME: Kartka
@@ -20,6 +24,11 @@ targets:
         CODE_SIGN_STYLE: Manual
         DEVELOPMENT_TEAM: ""
         ENABLE_HARDENED_RUNTIME: YES
+      configs:
+        # Release builds are signed for distribution outside the App Store and notarized.
+        Release:
+          CODE_SIGN_IDENTITY: "Developer ID Application"
+          DEVELOPMENT_TEAM: JYDM4GTWRT
     info:
       path: Kartka/Info.plist
       properties:
@@ -29,6 +38,7 @@ targets:
           - CFBundleTypeName: Plain Text
             CFBundleTypeRole: Editor
             LSHandlerRank: Alternate
+            NSDocumentClass: $(PRODUCT_MODULE_NAME).KartkaDocument
             LSItemContentTypes:
               - public.plain-text
               - public.utf8-plain-text

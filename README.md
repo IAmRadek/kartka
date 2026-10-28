@@ -2,7 +2,7 @@
 
 Kartka is a minimal plain text editor for macOS. Each document opens in its own window. The app has no tabs, no rich text, and no formatting.
 
-Kartka uses SwiftUI `DocumentGroup` for open, save, autosave, and recent files. The editor is an AppKit `NSTextView`.
+Kartka uses an AppKit `NSDocument` subclass for open, save, autosave, and recent files. Kartka saves every file as the type that it opened. The editor is an AppKit `NSTextView` in a SwiftUI view.
 
 ## Requirements
 
@@ -45,11 +45,31 @@ Run this command:
 make install
 ```
 
-The command builds a Release copy and puts `Kartka.app` in `~/Applications`. It also puts the `kartka` script in `~/.local/bin`. To use other folders, set `APP_DIR` or `BIN_DIR`, for example `make install BIN_DIR=/usr/local/bin`.
+The command builds a Release copy and puts `Kartka.app` in `~/Applications`. It also links `~/.local/bin/kartka` to the `kartka` script inside the app. To use other folders, set `APP_DIR` or `BIN_DIR`, for example `make install BIN_DIR=/usr/local/bin`.
+
+Release builds use the "Developer ID Application" certificate of team `JYDM4GTWRT`. Without that certificate in your keychain, use the Debug build.
+
+## Release
+
+A release is a notarized zip of `Kartka.app`. Notarization is a check by Apple that lets macOS open the app without a warning.
+
+Before the first release, save the notarization credentials in your keychain:
+
+```sh
+xcrun notarytool store-credentials kartka-notary --apple-id <Apple ID> --team-id JYDM4GTWRT
+```
+
+To make a release, do these steps:
+
+1. Set `MARKETING_VERSION` in `project.yml`.
+2. Run `make release`.
+3. Upload `build/Kartka-<version>.zip` to a GitHub release.
+
+The command prints the SHA-256 hash of the zip. The hash goes into the Nix package.
 
 ## Use as $EDITOR
 
-The `kartka` script opens files in a new Kartka process, then waits for that process to stop. When you close the last window of a Kartka process, that process quits.
+The `kartka` script opens files in a new Kartka process, then waits for that process to stop. When you close the last window of a Kartka process, that process quits. If you stop the script with Ctrl-C or close its terminal, the script quits its Kartka process. Kartka saves open documents before it quits.
 
 If `~/.local/bin` is in your `PATH`, add this line to your shell profile:
 
@@ -59,4 +79,4 @@ export EDITOR=kartka
 
 If a file does not exist, the script creates it as an empty file, because `open` cannot open a missing path.
 
-The script opens `~/Applications/Kartka.app`. If you installed the app in a different folder, set `KARTKA_APP` to the full path of `Kartka.app`.
+The script opens the app that contains it. If you start the script through a symlink, it opens the same app. A copy of the script outside an app opens `~/Applications/Kartka.app`. To open a different copy, set `KARTKA_APP` to the full path of `Kartka.app`.

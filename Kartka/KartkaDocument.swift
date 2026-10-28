@@ -1,36 +1,49 @@
+import AppKit
 import SwiftUI
-import UniformTypeIdentifiers
 
-struct KartkaDocument: FileDocument {
-    var text: String
+final class KartkaDocument: NSDocument, ObservableObject {
+    @Published var text = ""
 
-    init(text: String = "") {
-        self.text = text
+    override class var autosavesInPlace: Bool { true }
+
+    // NSDocument saves only to the exact types in Info.plist, and offers to duplicate any
+    // other file, such as a Makefile (public.make-source). Every file here is text, so it
+    // can always save as the type it was opened as.
+    override func writableTypes(for saveOperation: NSDocument.SaveOperationType) -> [String] {
+        let types = super.writableTypes(for: saveOperation)
+        guard let fileType, !types.contains(fileType) else { return types }
+        return [fileType] + types
     }
 
-    static var readableContentTypes: [UTType] {
-        var types: [UTType] = [.plainText, .utf8PlainText, .json, .yaml, .sourceCode]
-        if let markdown = UTType(filenameExtension: "md") {
-            types.append(markdown)
+    // NSDocument otherwise adds the type's usual extension, so a Makefile saves as
+    // Makefile.make, which the sandbox refuses because only the opened file is writable.
+    override func fileNameExtension(forType typeName: String, saveOperation: NSDocument.SaveOperationType) -> String? {
+        if let fileURL, typeName == fileType {
+            return fileURL.pathExtension
         }
-        // Files without an extension, such as git's COMMIT_EDITMSG, are only `.data`.
-        types.append(.data)
-        return types
+        return super.fileNameExtension(forType: typeName, saveOperation: saveOperation)
     }
 
-    // Every readable type is writable, so saving keeps a file's original type. `.plainText`
-    // comes first, so it is the type of new documents.
-    static var writableContentTypes: [UTType] { readableContentTypes }
+    override func makeWindowControllers() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 720, height: 560),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        let hostingView = NSHostingView(rootView: DocumentView(document: self))
+        hostingView.sizingOptions = [.minSize]
+        window.contentView = hostingView
+        window.center()
+        addWindowController(NSWindowController(window: window))
+    }
 
-    init(configuration: ReadConfiguration) throws {
-        guard let data = configuration.file.regularFileContents else {
-            throw CocoaError(.fileReadCorruptFile)
-        }
+    override func read(from data: Data, ofType typeName: String) throws {
         text = Self.decode(data)
     }
 
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        FileWrapper(regularFileWithContents: Data(text.utf8))
+    override func data(ofType typeName: String) throws -> Data {
+        Data(text.utf8)
     }
 
     /// UTF-8 first, then Foundation's encoding detection, then lossy UTF-8.
