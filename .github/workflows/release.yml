@@ -11,8 +11,6 @@ permissions:
 jobs:
   release:
     runs-on: macos-15
-    env:
-      KEYCHAIN: ${{ runner.temp }}/signing.keychain-db
     steps:
       - uses: actions/checkout@v4
 
@@ -36,6 +34,7 @@ jobs:
           NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
           NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
         run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
           keychain_password=$(uuidgen)
           certificate="$RUNNER_TEMP/developer-id.p12"
           echo "$DEVELOPER_ID_P12" | base64 --decode > "$certificate"
@@ -68,4 +67,4 @@ jobs:
 
       - name: Remove signing keychain
         if: always()
-        run: security delete-keychain "$KEYCHAIN" || true
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true
