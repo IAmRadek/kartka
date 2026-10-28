@@ -68,3 +68,7 @@ Kartka/Kartka.entitlements
 build/
 DerivedData/
 .DS_Store
+
+# Nix: `nix build` output symlinks.
+result
+result-*

@@ -63,6 +63,29 @@ jobs:
             --title "Kartka ${GITHUB_REF_NAME#v}" \
             --notes "SHA-256: \`$sha\`"
 
+      # Points the Nix package at this release on main. The tag checkout is a detached
+      # HEAD, so the step switches to main first; build output is ignored by git.
+      - name: Update Nix package
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          hash="sha256-$(openssl dgst -sha256 -binary "build/Kartka-$version.zip" | base64)"
+
+          git fetch --depth=1 origin main
+          git checkout -B main FETCH_HEAD
+          sed -i '' \
+            -e "s|version = \".*\";|version = \"$version\";|" \
+            -e "s|hash = \"sha256-.*\";|hash = \"$hash\";|" \
+            nix/package.nix
+
+          if git diff --quiet nix/package.nix; then
+            echo "nix/package.nix already points at $version"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "nix: update kartka to $version" nix/package.nix
+          git push origin main
+
       - name: Remove signing keychain
         if: always()
         run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true

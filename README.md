@@ -79,6 +79,25 @@ The workflow needs these repository secrets:
 - `NOTARY_APPLE_ID`: your Apple ID
 - `NOTARY_PASSWORD`: the app-specific password for notarization
 
+## Install with Nix
+
+The flake packages the notarized release zip from GitHub for `aarch64-darwin`. The package has `Applications/Kartka.app` and `bin/kartka`.
+
+In a nix-darwin configuration, add the flake as an input:
+
+```nix
+inputs.kartka.url = "github:IAmRadek/kartka";
+```
+
+Then add the package and set the editor:
+
+```nix
+environment.systemPackages = [ inputs.kartka.packages.aarch64-darwin.default ];
+environment.variables.EDITOR = "kartka";
+```
+
+nix-darwin puts the app in `/Applications/Nix Apps`. The release workflow updates `version` and `hash` in `nix/package.nix` on `main`. Your configuration pins the flake in its own `flake.lock`, so run `nix flake update kartka` there to get a new release.
+
 ## Use as $EDITOR
 
 The `kartka` script opens files in a new Kartka process, then waits for that process to stop. When you close the last window of a Kartka process, that process quits. If you stop the script with Ctrl-C or close its terminal, the script quits its Kartka process. Kartka saves open documents before it quits.
