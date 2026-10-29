@@ -7,13 +7,13 @@
 
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "kartka";
-  version = "0.2.0";
+  version = "0.3.0";
 
   # The notarized release zip from GitHub. To update, change `version` and `hash`.
   # The release notes list the SHA-256; `nix hash convert --to sri <hex>` turns it into `hash`.
   src = fetchurl {
     url = "https://github.com/IAmRadek/kartka/releases/download/v${finalAttrs.version}/Kartka-${finalAttrs.version}.zip";
-    hash = "sha256-BJc+3UZzIbRpEdq+KZmsfxiYVIpVixeqv4go+v3BYF8=";
+    hash = "sha256-iHsOuH/noxA1KRh5L1GXmzcf9dlQCt6oi2hfduIy5Hk=";
   };
 
   nativeBuildInputs = [ unzip ];
