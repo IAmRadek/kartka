@@ -8,8 +8,9 @@ APP := build/Build/Products/Release/Kartka.app
 ARCHIVE := build/Kartka.xcarchive
 EXPORT := build/export
 ZIP := build/Kartka-$(VERSION).zip
+ICONSET := Kartka/Assets.xcassets/AppIcon.appiconset
 
-.PHONY: project build install export release clean
+.PHONY: project build install export release icon clean
 
 project:
 	xcodegen generate
@@ -38,6 +39,13 @@ release: export
 	xcrun stapler staple "$(EXPORT)/Kartka.app"
 	ditto -c -k --keepParent "$(EXPORT)/Kartka.app" "$(ZIP)"
 	shasum -a 256 "$(ZIP)"
+
+# Makes every macOS icon size from assets/icon.png. Run it after you change the icon.
+icon:
+	for size in 16 32 128 256 512; do \
+		sips -z $$size $$size assets/icon.png --out "$(ICONSET)/icon_$$size.png" > /dev/null; \
+		sips -z $$((size * 2)) $$((size * 2)) assets/icon.png --out "$(ICONSET)/icon_$$size@2x.png" > /dev/null; \
+	done
 
 clean:
 	rm -rf build Kartka.xcodeproj

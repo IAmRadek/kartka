@@ -24,6 +24,7 @@ targets:
         CODE_SIGN_STYLE: Manual
         DEVELOPMENT_TEAM: ""
         ENABLE_HARDENED_RUNTIME: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
       configs:
         # Release builds are signed for distribution outside the App Store and notarized.
         Release:
